@@ -13,3 +13,5 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+go-auth-proxy.exe
+go-auth-proxy
