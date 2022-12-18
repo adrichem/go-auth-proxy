@@ -3,65 +3,70 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 
 	"github.com/MicahParks/keyfunc"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
 
 func main() {
-	var ListenAddress = flag.String("address", ":80", "Adress to listen on.")
+	var ListenAddress = flag.String("address", "0.0.0.0:80", "Adress to listen on.")
 	var Upstream = flag.String("upstream", "", "Url to proxy to.")
 	var HeaderName = flag.String("header-name", "apikey", "Name of header to add to proxied requests.")
 	var HeaderValue = flag.String("header-value", "", "Value of header to add to proxied requests.")
 	flag.Parse()
-	if *ListenAddress == "" || *Upstream == "" || *HeaderName == "" || *HeaderValue == "" {
+	if *ListenAddress == "" || *Upstream == "" {
 		flag.PrintDefaults()
 		panic("invalid arguments")
 	}
-	http.HandleFunc("/", authenticateAzureAd(proxy(*Upstream, *HeaderName, *HeaderValue)))
-	fmt.Printf("Listening on %s\n", *ListenAddress)
-	log.Fatal(http.ListenAndServe(*ListenAddress, nil))
+
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"PUT", "PATCH", "GET", "POST", "DELETE"},
+		AllowHeaders: []string{"Origin", "Authorization"},
+	}))
+	r.Use(azureADAuthenticationMiddleware)
+	r.Any("/*path", proxy(*Upstream, *HeaderName, *HeaderValue))
+	r.Run(*ListenAddress)
 }
 
-func proxy(Upstream string, HeaderName string, HeaderValue string) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		remote, err := url.Parse(Upstream)
-		if err != nil {
-			panic(err)
-		}
-
+func proxy(Upstream string, HeaderName string, HeaderValue string) gin.HandlerFunc {
+	remote, err := url.Parse(Upstream)
+	if err != nil {
+		panic(err)
+	}
+	return func(c *gin.Context) {
 		proxy := httputil.NewSingleHostReverseProxy(remote)
 		proxy.Director = func(req *http.Request) {
-			r.Header.Add(HeaderName, HeaderValue)
-			req.Header = r.Header
+			if HeaderName != "" && HeaderValue != "" {
+				req.Header.Add(HeaderName, HeaderValue)
+			}
 			req.Host = remote.Host
 			req.URL.Scheme = remote.Scheme
 			req.URL.Host = remote.Host
-			req.URL.Path = r.RequestURI
+			req.URL.Path = c.Param("path")
 		}
-		proxy.ServeHTTP(w, r)
-
+		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }
 
-func authenticateAzureAd(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := verifyToken(r)
-
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		next(w, r)
+func azureADAuthenticationMiddleware(c *gin.Context) {
+	_, err := verifyToken(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err.Error())
+		c.Abort()
+		return
 	}
+	c.Next()
 }
 
 func extractToken(r *http.Request) (string, error) {
