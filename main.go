@@ -35,10 +35,10 @@ func main() {
 	}))
 	r.Use(AzureAdJwtTokenValidation())
 	if *Upstream != "" {
-		//Proxyíng to upstream
+		//Proxying to upstream
 		r.Any("/*path", proxy(*Upstream, *HeaderName, *HeaderValue))
 	} else {
-		//Not proxy'ing. Probably a load test. Just return HTTP 200
+		//Load test mode. Just return HTTP 200
 		r.Any("/*path", func(c *gin.Context) { c.Status(http.StatusOK) })
 	}
 	err := r.Run(*ListenAddress)
