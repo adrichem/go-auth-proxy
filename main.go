@@ -19,7 +19,7 @@ func main() {
 	var HeaderName = flag.String("header-name", "Apikey", "Name of header to add to proxied requests.")
 	var HeaderValue = flag.String("header-value", "", "Value of header to add to proxied requests.")
 	flag.Parse()
-	if *ListenAddress == "" || *Upstream == "" {
+	if *ListenAddress == "" {
 		flag.PrintDefaults()
 		panic("invalid arguments")
 	}
