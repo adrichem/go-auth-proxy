@@ -73,31 +73,6 @@ func TestMultipleContexts(t *testing.T) {
 	assert.Equal(t, 1, lastContextValue)
 }
 
-func TestClaimNbf(t *testing.T) {
-	initDefaults()
-	var hmacSampleSecret []byte
-	claims := defaultClaims(10)
-	claims["nbf"] = time.Now().AddDate(1, 1, 1).Unix()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString := getSignedString(token, hmacSampleSecret)
-	fnValidate := Create(keyFuncFor(hmacSampleSecret), selectorFor[int](tokenString), pass, fail)
-	fnValidate(1)
-	assert.True(t, failCalled)
-	assert.False(t, passCalled)
-}
-
-func TestClaimExp(t *testing.T) {
-	initDefaults()
-	var hmacSampleSecret []byte
-	claims := defaultClaims(-100)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString := getSignedString(token, hmacSampleSecret)
-	fnValidate := Create(keyFuncFor(hmacSampleSecret), selectorFor[int](tokenString), pass, fail)
-	fnValidate(1)
-	assert.True(t, failCalled)
-	assert.False(t, passCalled)
-}
-
 func TestTokenValidSyntax(t *testing.T) {
 	initDefaults()
 	var hmacSampleSecret []byte
