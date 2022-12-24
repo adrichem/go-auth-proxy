@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"go-auth-proxy/pkg/claimverifier"
+	jwtValidator "go-auth-proxy/pkg/jwtAuthenticationMiddleware"
 	"go-auth-proxy/pkg/tokenextractor"
 	"log"
 	"net/http"
@@ -84,42 +85,17 @@ func proxy(Upstream string, HeaderName string, HeaderValue string) gin.HandlerFu
 }
 
 func azureAdJwtTokenValidation(paramName string) gin.HandlerFunc {
-	//Azure AD keyset is independent from the token content
+	//Azure AD keysetglobal and independant from token and AD tenant
 	jwks, err := keyfunc.Get("https://login.microsoftonline.com/common/discovery/v2.0/keys", keyfunc.Options{})
 	if err != nil {
 		panic(err)
 	}
-	keyFuncSelector := func(string) (*keyfunc.JWKS, error) { return jwks, nil }
-	return createAuthenticationMiddleware(keyFuncSelector, tokenextractor.ExtractTokenFromHttpRequest, paramName)
+	extractToken := func(c *gin.Context) (string, error) { return tokenextractor.ExtractTokenFromHttpRequest(c.Request) }
+	pass := func(c *gin.Context, t *jwt.Token) { c.Set("token", t); pass(c) }
+	return jwtValidator.Create(jwks.Keyfunc, extractToken, pass, fail)
 }
 
-func createAuthenticationMiddleware(selectKeySet func(string) (*keyfunc.JWKS, error),
-	extractToken func(r *http.Request) (string, error),
-	paramName string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var token string
-		var err error
-		var jwks *keyfunc.JWKS
-		var parsedToken *jwt.Token
-		token, err = extractToken(c.Request)
-		if err == nil {
-			jwks, err = selectKeySet(token)
-		}
-		if err == nil {
-			parsedToken, err = jwt.Parse(token, jwks.Keyfunc)
-		}
-		if err == nil {
-			c.Set(paramName, parsedToken)
-		}
-		if err != nil {
-			fail(c, err)
-			return
-		}
-		c.Next()
-	}
-}
-
-func tokenSelector(c *gin.Context) *jwt.Token {
+func tokenFromGinContext(c *gin.Context) *jwt.Token {
 	value, found := c.Get("token")
 	if !found {
 		panic("Token not found in context")
@@ -132,7 +108,7 @@ func verifyIssuer(ExpectedIssuer string) gin.HandlerFunc {
 		return ExpectedIssuer != "" && c != nil && c.(jwt.MapClaims).VerifyIssuer(ExpectedIssuer, true)
 	}
 	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid issuer")) }
-	return claimverifier.VerifyClaim(tokenSelector, fnPredicate, pass, fnFail)
+	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
 }
 
 func verifyAudience(ExpectedAudience string) gin.HandlerFunc {
@@ -140,5 +116,5 @@ func verifyAudience(ExpectedAudience string) gin.HandlerFunc {
 		return ExpectedAudience != "" && c != nil && c.(jwt.MapClaims).VerifyAudience(ExpectedAudience, true)
 	}
 	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid audience")) }
-	return claimverifier.VerifyClaim(tokenSelector, fnPredicate, pass, fnFail)
+	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
 }
