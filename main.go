@@ -39,7 +39,6 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
@@ -47,13 +46,19 @@ func main() {
 		AllowHeaders: []string{"Origin", "Authorization"},
 	}))
 	r.Use(azureAdJwtTokenValidation("token"))
-	r.Use(verifyAudience(*Aud))
-	r.Use(verifyIssuer(*Iss))
+	if *Aud != "" {
+		log.Println("aud claim must have value " + *Aud)
+		r.Use(verifyAudience(*Aud))
+	}
+	if *Iss != "" {
+		log.Println("iss claim must have value " + *Iss)
+		r.Use(verifyIssuer(*Iss))
+	}
 	if *Upstream != "" {
 		log.Printf("Proxying to %s", *Upstream)
 		r.Any("/*path", proxy(*Upstream, *HeaderName, *HeaderValue))
 	} else {
-		log.Println("Running in load test mode. All requests get HTTP 200 response")
+		log.Println("Running in load test mode. All authenticated requests get HTTP 200 response")
 		r.Any("/*path", func(c *gin.Context) { c.Status(http.StatusOK) })
 	}
 
@@ -85,7 +90,7 @@ func proxy(Upstream string, HeaderName string, HeaderValue string) gin.HandlerFu
 }
 
 func azureAdJwtTokenValidation(paramName string) gin.HandlerFunc {
-	//Azure AD keysetglobal and independant from token and AD tenant
+	//Azure AD keyset is independent from AD tenant
 	jwks, err := keyfunc.Get("https://login.microsoftonline.com/common/discovery/v2.0/keys", keyfunc.Options{})
 	if err != nil {
 		panic(err)
@@ -105,7 +110,7 @@ func tokenFromGinContext(c *gin.Context) *jwt.Token {
 
 func verifyIssuer(ExpectedIssuer string) gin.HandlerFunc {
 	fnPredicate := func(c jwt.Claims) bool {
-		return ExpectedIssuer != "" && c != nil && c.(jwt.MapClaims).VerifyIssuer(ExpectedIssuer, true)
+		return c.(jwt.MapClaims).VerifyIssuer(ExpectedIssuer, true)
 	}
 	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid issuer")) }
 	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
@@ -113,7 +118,7 @@ func verifyIssuer(ExpectedIssuer string) gin.HandlerFunc {
 
 func verifyAudience(ExpectedAudience string) gin.HandlerFunc {
 	fnPredicate := func(c jwt.Claims) bool {
-		return ExpectedAudience != "" && c != nil && c.(jwt.MapClaims).VerifyAudience(ExpectedAudience, true)
+		return c.(jwt.MapClaims).VerifyAudience(ExpectedAudience, true)
 	}
 	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid audience")) }
 	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
