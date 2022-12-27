@@ -4,7 +4,7 @@ import (
 	"flag"
 	jwtValidator "go-auth-proxy/pkg/jwtAuthenticationMiddleware"
 	"go-auth-proxy/pkg/tokenextractor"
-	verifyaudience "go-auth-proxy/pkg/verifyAudience"
+	"go-auth-proxy/pkg/verifyaudience"
 	"go-auth-proxy/pkg/verifyissuer"
 	"log"
 	"net/http"
