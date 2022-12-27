@@ -1,11 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"go-auth-proxy/pkg/claimverifier"
 	jwtValidator "go-auth-proxy/pkg/jwtAuthenticationMiddleware"
 	"go-auth-proxy/pkg/tokenextractor"
+	verifyaudience "go-auth-proxy/pkg/verifyAudience"
+	"go-auth-proxy/pkg/verifyissuer"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -48,11 +48,11 @@ func main() {
 	r.Use(azureAdJwtTokenValidation("token"))
 	if *Aud != "" {
 		log.Println("aud claim must have value " + *Aud)
-		r.Use(verifyAudience(*Aud))
+		r.Use(verifyaudience.Verify(*Aud, claimsSelector))
 	}
 	if *Iss != "" {
 		log.Println("iss claim must have value " + *Iss)
-		r.Use(verifyIssuer(*Iss))
+		r.Use(verifyissuer.Verify(*Iss, claimsSelector))
 	}
 	if *Upstream != "" {
 		log.Printf("Proxying to %s", *Upstream)
@@ -99,27 +99,10 @@ func azureAdJwtTokenValidation(paramName string) gin.HandlerFunc {
 	pass := func(c *gin.Context, t *jwt.Token) { c.Set("token", t); pass(c) }
 	return jwtValidator.Create(jwks.Keyfunc, extractToken, pass, fail)
 }
-
-func tokenFromGinContext(c *gin.Context) *jwt.Token {
+func claimsSelector(c *gin.Context) jwt.MapClaims {
 	value, found := c.Get("token")
 	if !found {
 		panic("Token not found in context")
 	}
-	return value.(*jwt.Token)
-}
-
-func verifyIssuer(ExpectedIssuer string) gin.HandlerFunc {
-	fnPredicate := func(c jwt.Claims) bool {
-		return c.(jwt.MapClaims).VerifyIssuer(ExpectedIssuer, true)
-	}
-	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid issuer")) }
-	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
-}
-
-func verifyAudience(ExpectedAudience string) gin.HandlerFunc {
-	fnPredicate := func(c jwt.Claims) bool {
-		return c.(jwt.MapClaims).VerifyAudience(ExpectedAudience, true)
-	}
-	fnFail := func(c *gin.Context) { fail(c, errors.New("invalid audience")) }
-	return claimverifier.VerifyClaim(tokenFromGinContext, fnPredicate, pass, fnFail)
+	return value.(*jwt.Token).Claims.(jwt.MapClaims)
 }
