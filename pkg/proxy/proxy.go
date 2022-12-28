@@ -14,6 +14,13 @@ func Proxy(Upstream string, HeaderName string, HeaderValue string) gin.HandlerFu
 		panic(err)
 	}
 
+	if remote.Scheme == "" {
+		panic("missing scheme on upstream url")
+	}
+	if remote.Host == "" {
+		panic("missing hosy on upstream url")
+	}
+
 	return func(c *gin.Context) {
 		proxy := httputil.NewSingleHostReverseProxy(remote)
 		proxy.Director = func(req *http.Request) {

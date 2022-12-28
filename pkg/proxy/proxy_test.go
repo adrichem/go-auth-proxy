@@ -14,8 +14,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeaders(t *testing.T) {
+func TestBadUrlShouldPanic(t *testing.T) {
+	assert.Panics(t, func() { Proxy("\n", "", "") })
+	assert.Panics(t, func() { Proxy("http://", "", "") })
+	assert.Panics(t, func() { Proxy("localhost", "", "") })
+}
 
+func TestHeaders(t *testing.T) {
 	headerTest := func(headerName, expectedHeader string) bool {
 		keyFound := false
 		actualHeader := ""
@@ -24,12 +29,12 @@ func TestHeaders(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			_, keyFound = r.Header[headerName]
 			actualHeader = r.Header.Get(headerName)
-			respondWithStatus(http.StatusOK)(w, r)
+			respondWithStatus(200)(w, r)
 		})
 
 		srv := httptest.NewServer(mux)
 		fnProxy := Proxy("http://"+srv.Listener.Addr().String(), headerName, expectedHeader)
-		c, _ := ginTestContext.TestContext()
+		c, _ := ginTestContext.TestContextWithGinResponseRecorder()
 		fnProxy(c)
 		srv.Close()
 		return keyFound && actualHeader == expectedHeader
@@ -61,29 +66,6 @@ func TestHeaders(t *testing.T) {
 	if err := quick.Check(headerTest, &c); err != nil {
 		t.Error(err)
 	}
-}
-
-func TestUpstreamUnreachable(t *testing.T) {
-	fnProxy := Proxy("http://aaaaaaaaaaaaa127.0.0.1:1", "", "")
-	c, response := ginTestContext.TestContext()
-	fnProxy(c)
-	result := response.Result()
-	assert.Equal(t, http.StatusBadGateway, result.StatusCode, result.Body)
-}
-
-func TestGet(t *testing.T) {
-	expectedStatus := http.StatusConflict
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", respondWithStatus(expectedStatus))
-	srv := httptest.NewServer(mux)
-	addr := srv.Listener.Addr()
-
-	fnProxy := Proxy("http://"+addr.String(), "", "")
-	c, response := ginTestContext.TestContext()
-	fnProxy(c)
-	assert.Equal(t, expectedStatus, response.Code)
-
-	srv.Close()
 }
 
 func respondWithStatus(status int) func(http.ResponseWriter, *http.Request) {

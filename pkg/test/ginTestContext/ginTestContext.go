@@ -29,9 +29,26 @@ func CreateTestResponseRecorder() *TestResponseRecorder {
 	}
 }
 
-func TestContext() (*gin.Context, *TestResponseRecorder) {
+/*
+When testing the combination of gin and the http reverse proxy, we get panics like:
+panic: interface conversion: *httptest.ResponseRecorder is not http.CloseNotifier: missing method CloseNotify
+For this we need a have a custom recorder that implements httptest.ResponseRecorder and the CloseNotify method
+*/
+func TestContextWithGinResponseRecorder() (*gin.Context, *TestResponseRecorder) {
+	rr := CreateTestResponseRecorder()
+	// creates a test context and gin engine
+	ctx, _ := gin.CreateTestContext(rr)
+	ctx.Request = &http.Request{
+		Method: "GET",
+		Header: make(http.Header),
+		URL:    &url.URL{},
+	}
+	return ctx, rr
+}
+
+func TestContext() (*gin.Context, *httptest.ResponseRecorder) {
 	gin.SetMode(gin.TestMode)
-	responseWriter := CreateTestResponseRecorder()
+	responseWriter := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(responseWriter)
 	ctx.Request = &http.Request{
 		Method: "GET",
@@ -41,7 +58,7 @@ func TestContext() (*gin.Context, *TestResponseRecorder) {
 	return ctx, responseWriter
 }
 
-func ContextWithClaim(claimName string, claimValue string) (*gin.Context, *TestResponseRecorder) {
+func ContextWithClaim(claimName string, claimValue string) (*gin.Context, *httptest.ResponseRecorder) {
 	ctx, response := TestContext()
 	claims := jwt.MapClaims{}
 	claims[claimName] = claimValue
@@ -50,7 +67,7 @@ func ContextWithClaim(claimName string, claimValue string) (*gin.Context, *TestR
 	return ctx, response
 }
 
-func ContextWithClaims(claims jwt.MapClaims) (*gin.Context, *TestResponseRecorder) {
+func ContextWithClaims(claims jwt.MapClaims) (*gin.Context, *httptest.ResponseRecorder) {
 	ctx, response := TestContext()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ctx.Set("token", token)
