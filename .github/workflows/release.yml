@@ -18,11 +18,14 @@ jobs:
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       
-      - name: docker build
+      - name: docker build ${{ github.sha }}
         run: docker build -t adrichem/go-auth-proxy:${{ github.sha }} .
+
+      - name: docker push ${{ github.sha }}
+        run: docker push adrichem/go-auth-proxy:${{ github.sha }} 
       
-      - name: docker tag (as latest)
+      - name: docker tag latest
         run: docker tag adrichem/go-auth-proxy:${{ github.sha }} adrichem/go-auth-proxy:latest  
       
-      - name: docker push
+      - name: docker push latest
         run: docker push adrichem/go-auth-proxy:latest
