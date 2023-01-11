@@ -1,0 +1,12 @@
+{
+    "AllowOrigins": [
+        "*"
+    ],
+    "AllowMethods": [
+        "GET","PUT","POST"
+    ],
+    "AllowHeaders": [
+        "Origin",
+        "Authorization"
+    ]
+}
