@@ -9,4 +9,5 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /main .
 
 FROM gcr.io/distroless/static-debian11
 COPY --from=base /main .
+COPY --from=base /app/cors.json .
 ENTRYPOINT ["./main"]
