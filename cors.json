@@ -1,0 +1,16 @@
+{
+    "AllowOrigins": [
+        "*"
+    ],
+    "AllowMethods": [
+        "PUT",
+        "PATCH",
+        "GET",
+        "POST",
+        "DELETE"
+    ],
+    "AllowHeaders": [
+        "Origin",
+        "Authorization"
+    ]
+}

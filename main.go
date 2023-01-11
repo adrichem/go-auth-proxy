@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"go-auth-proxy/pkg/CorsConfig"
 	"go-auth-proxy/pkg/claimsSelector"
 	jwtValidator "go-auth-proxy/pkg/jwtAuthenticationMiddleware"
 	"go-auth-proxy/pkg/proxy"
@@ -31,6 +32,7 @@ func main() {
 	var HeaderValue = flag.String("header-value", "", "Value of header to add to proxied requests.")
 	var Aud = flag.String("aud", "", "Reject tokens not issued to intendend audience (aud claim)")
 	var Iss = flag.String("iss", "", "Reject tokens not issued by intended issuer (iss claim")
+
 	flag.Parse()
 	if *ListenAddress == "" {
 		flag.PrintDefaults()
@@ -40,11 +42,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"PUT", "PATCH", "GET", "POST", "DELETE"},
-		AllowHeaders: []string{"Origin", "Authorization"},
-	}))
+	r.Use(cors.New(CorsConfig.ReadConfig("cors.json")))
 	r.Use(azureAdJwtTokenValidation("token"))
 	if *Aud != "" {
 		log.Println("aud claim must have value " + *Aud)
