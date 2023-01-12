@@ -11,6 +11,7 @@ import (
 	"go-auth-proxy/pkg/verifyissuer"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/MicahParks/keyfunc"
 	"github.com/gin-contrib/cors"
@@ -69,7 +70,7 @@ func main() {
 
 func azureAdJwtTokenValidation(paramName string) gin.HandlerFunc {
 	//Azure AD keyset is independent from AD tenant
-	jwks, err := keyfunc.Get("https://login.microsoftonline.com/common/discovery/v2.0/keys", keyfunc.Options{})
+	jwks, err := keyfunc.Get("https://login.microsoftonline.com/common/discovery/v2.0/keys", keyfunc.Options{RefreshInterval: time.Hour * 24})
 	if err != nil {
 		panic(err)
 	}
