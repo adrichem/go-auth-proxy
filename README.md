@@ -8,24 +8,27 @@
 
 
 ## Objective
-Secure some upstream web-api with AzureAd authentication. Created as Proof of Concept to compare against a NodeJs version.
-
-It validates the JWT token is: 
+Secure your web-api with AzureAd authentication. Created as Proof of Concept to compare against a NodeJs version. It validates the JWT token is: 
 1. Valid untampered AzureAD token.
 2. Valid in its lifetime (exp and nbf claims)
 3. Issued by your AzureAD tenant (iss claim)
 4. Issued to your expected audience (aud claim)
 
+## CORS
+By default the proxy allows all origins and the most common HTTP verbs. You can control the CORS configuration by editting cors.json. This file is in format  [`cors.Config`](https://github.com/gin-contrib/cors/blob/master/cors.go) 
+
+
 ## Running in docker
 
 ```bash
-docker run -ti --rm -p80:80 adrichem/go-auth-proxy `
+docker run -ti --rm -p80:80 adrichem/go-auth-proxy:latest `
     --upstream https://my-web-api.com `
     --header-value my-secret-api-key `
     --header-name Apikey `
     --aud expected-value-for-aud-claim `
     --iss expected-value-for-iss-claim
 ```
+If you need to overrule the default cors configuration, you can volume map your own `cors.json` onto `/cors.json` of the container.
 
 ## Very rough performance measurement
 It achieves 12.000 token validations per second while consuming <50% CPU and <30 MB of RAM. Docker image size is <15 MB.
