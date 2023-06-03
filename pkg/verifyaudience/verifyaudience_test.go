@@ -1,10 +1,11 @@
 package verifyaudience
 
 import (
-	"go-auth-proxy/pkg/claimsSelector"
-	"go-auth-proxy/pkg/test/ginTestContext"
 	"testing"
 	"testing/quick"
+
+	"github.com/adrichem/go-auth-proxy/pkg/claimsSelector"
+	"github.com/adrichem/go-auth-proxy/pkg/test/ginTestContext"
 )
 
 func TestNonMatchingValues(t *testing.T) {

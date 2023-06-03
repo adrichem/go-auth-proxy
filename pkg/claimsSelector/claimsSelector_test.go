@@ -1,8 +1,9 @@
 package claimsSelector
 
 import (
-	"go-auth-proxy/pkg/test/ginTestContext"
 	"testing"
+
+	"github.com/adrichem/go-auth-proxy/pkg/test/ginTestContext"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -2,16 +2,17 @@ package main
 
 import (
 	"flag"
-	"go-auth-proxy/pkg/CorsConfig"
-	"go-auth-proxy/pkg/claimsSelector"
-	jwtValidator "go-auth-proxy/pkg/jwtAuthenticationMiddleware"
-	"go-auth-proxy/pkg/proxy"
-	"go-auth-proxy/pkg/tokenextractor"
-	"go-auth-proxy/pkg/verifyaudience"
-	"go-auth-proxy/pkg/verifyissuer"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/adrichem/go-auth-proxy/pkg/CorsConfig"
+	"github.com/adrichem/go-auth-proxy/pkg/claimsSelector"
+	jwtValidator "github.com/adrichem/go-auth-proxy/pkg/jwtAuthenticationMiddleware"
+	"github.com/adrichem/go-auth-proxy/pkg/proxy"
+	"github.com/adrichem/go-auth-proxy/pkg/tokenextractor"
+	"github.com/adrichem/go-auth-proxy/pkg/verifyaudience"
+	"github.com/adrichem/go-auth-proxy/pkg/verifyissuer"
 
 	"github.com/MicahParks/keyfunc"
 	"github.com/gin-contrib/cors"
