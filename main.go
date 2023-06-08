@@ -40,7 +40,7 @@ func main() {
 		flag.PrintDefaults()
 		panic("invalid arguments")
 	}
-
+	*ListenAddress = *ListenAddress
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
